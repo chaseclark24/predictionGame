@@ -1,0 +1,112 @@
+
+<!doctype html>
+<html>
+<head>
+    <meta charset=utf-8 name="viewport" content="width=device-width, initial-scale=1">
+    <title>Magic 8 Ball</title>
+    <link rel=stylesheet href=css/ui-block.css>
+    <!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+	<!-- Optional theme -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+</head>
+<body>
+    <button type="button" class="btn btn-secondary btn-lg" id=request_number onclick="javascript:onClickRefresh()">Click here to request prediction!</button>
+        
+        <br><br>
+        <div class="thumbnail text-center">
+        <img src="lib/magic8ball2.jpeg" alt="" class="img-responsive" width=100% onclick="javascript:onClickRefresh()">
+        <div class="caption">
+        <p id="outcome" class='captionText'></p>
+        </div>
+        </div>
+        <br><br>
+        <br>
+   
+
+    
+    <br><br>      
+
+   
+
+    <!-- All of these scripts are dependancies from the Nebulas Web Wallet -->
+    <script src=lib/jquery-3.3.1.min.js></script>
+    <script src=lib/nebulas.js></script>
+    <script src=js/1-localSave.js></script>
+    <script src=js/i18n.js data-depends=jquery.slim></script>
+    <script src=js/ui-block.js data-depends="bootbox blockies jquery.slim i18n.js nebulas.js"></script> 
+    
+    <!-- Front end logic for our Dapp -->
+    <script>
+        "use strict";
+
+        // Global variables used by our Dapp
+        var contract_address = "n1rpJrHfe6J2qQF1N2xRZSUUnsPD7L8pPq2";
+        var user_account = null;
+
+        // Gas hard coded for simplicity, ideally your app would allow for changing the gas price, etc.
+        var is_mainnet = true;
+        var nebulas_chain_id, nebulas_domain; 
+        var gas_price = 1000000;
+        var gas_limit = 200000;
+
+        if(is_mainnet) {
+            nebulas_chain_id = 1;
+            nebulas_domain = "https://mainnet.nebulas.io";
+        } else {
+            nebulas_chain_id = 1001;
+            nebulas_domain = "https://testnet.nebulas.io";
+        }
+
+        // The nebulas API, used for signing transactions, etc
+        var nebulas = require("nebulas");
+        var neb = new nebulas.Neb();
+        neb.setRequest(new nebulas.HttpRequest(nebulas_domain));
+
+        // Adds the wallet selection workflow, from the Nebulas wallet
+        uiBlock.insert({
+            selectWalletFile: [".select-wallet-file", onUnlockFile]
+        });
+
+        // Called by the Refresh button
+        function onClickRefresh() {
+            neb.api.call({
+                from: contract_address, // Using the contract here so this can be called without loggin on.
+                to: contract_address,
+                value: 0,
+                nonce: 0, // Nonce is irrelavant when read-only (there is no transaction charge)
+                gasPrice: gas_price,
+                gasLimit: gas_limit,
+                contract: {function: "getResult"}
+            }).then(function (resp) {
+                var response = JSON.parse(resp.result);
+                if(response) {
+                    $("#rng_request").show();
+                    $("#rng_request_pending").hide();
+                    $("#outcome").text(response);
+                }
+            });         
+        }
+
+       
+
+        // Called by the Nebulas library when the user selects their wallet file and enters the password.
+        function onUnlockFile(swf, fileJson, account, password) {
+            account.fromKey(fileJson, password); // Load account information 
+            user_account = account; // Save it in a global variable
+
+            // Enables buttons so the user may now use the Dapp
+            $("#request_number").attr("disabled", false);                
+        }
+
+        $("#rng_request").hide();
+
+        if(window.location.search) {
+            onClickRefresh();
+        } else {
+           // $("#rng_request_pending").hide();
+        }
+    </script>
+</body>
+</html>
